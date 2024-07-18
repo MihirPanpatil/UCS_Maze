@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uniform Cost Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 min-h-screen flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <h1 class="text-4xl font-italic mb-8 text-center text-gray-100">Maze Puzzle Using Uniform Cost Search</h1>
+        <div class="flex flex-col items-center">
+           
+           
+            <div id="maze" class="grid gap-1 mb-4"></div>
+                       
+            
+            <div class="flex space-x-4 mb-4">
+                
+                <button id="generateMaze" class="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-lg font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-500 to-pink-500 group-hover:from-purple-500 group-hover:to-pink-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-purple-200 dark:focus:ring-purple-800">
+                    <span class = "relative px-5 py-2.5 transition-all ease-in duration-80 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0">
+                        Generate Maze
+                    </span>  
+                </button>
+
+                
+                <button id="solveMaze" class="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-lg font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-green-400 to-blue-600 group-hover:from-green-400 group-hover:to-blue-600 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800">
+                    <span class = "relative px-5 py-2.5 transition-all ease-in duration-80 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0">
+                        Solve Maze
+                    </span>
+                </button>
+
+            </div>
+
+            <div id="pathCost" class="text-xl font-semibold text-gray-100"></div>
+
+        </div>
+    </div>
+
+
+<script>
+
+    const MAZE_SIZE = 15;
+    let maze = [];
+    let start = null;
+    let end = null;
+
+    function createMaze() //Creates a maze.
+    {
+        maze = Array(MAZE_SIZE).fill().map(() => Array(MAZE_SIZE).fill(0));
+        for(let i = 0; i < MAZE_SIZE; i++) 
+        {
+            for(let j = 0; j < MAZE_SIZE; j++) 
+            {
+                maze[i][j] = Math.random() < 0.3 ? 1 : 0;
+            }
+        }
+        start = null;
+        end = null;
+        renderMaze();
+    }
+
+    function renderMaze() 
+    {
+        const mazeElement = document.getElementById('maze');
+        mazeElement.innerHTML = '';
+        mazeElement.style.gridTemplateColumns = `repeat(${MAZE_SIZE}, 30px)`;
+
+        for(let i = 0; i < MAZE_SIZE; i++) 
+        {
+            for(let j = 0; j < MAZE_SIZE; j++) 
+            {
+                const cell = document.createElement('div');
+                cell.classList.add('w-7', 'h-7', 'border', 'border-gray-300');
+                cell.dataset.row = i;
+                cell.dataset.col = j;
+
+                if(maze[i][j] === 1) 
+                {
+                    cell.classList.add('bg-gray-800');
+                } 
+                else 
+                {
+                    cell.classList.add('bg-white');
+                    cell.addEventListener('click', selectStartEnd);
+                }
+
+                mazeElement.appendChild(cell);
+            }
+        }
+    }
+
+    function selectStartEnd(event) //Start and End Pointers
+    {
+        const row = parseInt(event.target.dataset.row);
+        const col = parseInt(event.target.dataset.col);
+
+        if(!start) 
+        {
+            start = [row, col];
+            event.target.classList.remove('bg-white');
+            event.target.classList.add('bg-teal-600');
+        } 
+        else if(!end && (row !== start[0] || col !== start[1])) 
+        {
+            end = [row, col];
+            event.target.classList.remove('bg-white');
+            event.target.classList.add('bg-rose-700');
+        }
+    }
+
+    function solveMaze() //UCS Algorithm Server Call
+    {
+        if(!start || !end) 
+        {
+            alert('Please select start and end points');
+            return;
+        }
+
+        fetch('/solve_maze/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ maze, start, end }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.path) 
+            {
+                highlightPath(data.path);
+                document.getElementById('pathCost').textContent = `Path Cost : ${data.cost}`;
+            } 
+            else 
+            {
+                alert('No path found');
+            }
+        });
+    }
+
+    function highlightPath(path) //Highlights the shortest path possible.
+    {
+        const mazeElement = document.getElementById('maze');
+        for(const [row, col] of path) 
+        {
+            const cell = mazeElement.children[row * MAZE_SIZE + col];
+            if(!cell.classList.contains('bg-teal-600') && !cell.classList.contains('bg-rose-700')) 
+            {
+                cell.classList.remove('bg-white');
+                cell.classList.add('bg-amber-500');
+            }
+        }
+    }
+
+    document.getElementById('generateMaze').addEventListener('click', createMaze);
+    document.getElementById('solveMaze').addEventListener('click', solveMaze);
+    createMaze();
+
+</script>
+
+</body>
+</html>
